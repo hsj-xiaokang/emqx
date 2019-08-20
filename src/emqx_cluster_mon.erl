@@ -62,6 +62,11 @@ handle_info({partition, {occurred, Node}}, State) ->
 
 handle_info({partition, {healed, Nodes}}, State) ->
     alarm_handler:clear_alarm(partitioned),
+    case ekka_mnesia:running_nodes() -- [node() | Nodes] of
+        [] -> ignore;
+        Nodes2 ->
+            emqx_rpc:multicall(Nodes2, alarm_handler, clear_alarm, [partitioned])
+    end,
     {noreply, State};
 
 handle_info(Info, State) ->
